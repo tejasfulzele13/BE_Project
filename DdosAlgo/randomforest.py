@@ -1,49 +1,58 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
+from imblearn.over_sampling import SMOTE
 
 # Load the dataset
-file_path = 'Datasets.csv'  # Replace with your file's path
-data = pd.read_csv(file_path, low_memory=False)
+file_path = "Dataset.csv"  # Update with your actual path
+df = pd.read_csv(file_path)
 
-# Encode categorical columns
-label_encoder = LabelEncoder()
-data['Sender_IP'] = label_encoder.fit_transform(data['Sender_IP'])
-data['Target_IP'] = label_encoder.fit_transform(data['Target_IP'])
-data['Transport_Protocol'] = label_encoder.fit_transform(data['Transport_Protocol'])
+# Drop non-relevant columns
+df_cleaned = df.drop(columns=["Timestamp", "Source IP", "Destination IP"])
 
-# Define features and target
-features = [
-    'Sender_IP', 'Sender_Port', 'Target_IP', 'Target_Port',
-    'Transport_Protocol', 'Duration', 'AvgDuration', 'PBS', 
-    'AvgPBS', 'TBS', 'PBR', 'AvgPBR', 'TBR', 'Missed_Bytes', 
-    'Packets_Sent', 'Packets_Received', 'SRPR'
-]
-target = 'Label'
+# Encode categorical variables
+label_encoders = {}
+for col in ["Protocol", "Request Type", "Attack Type"]:
+    le = LabelEncoder()
+    df_cleaned[col] = le.fit_transform(df_cleaned[col])
+    label_encoders[col] = le
 
-X = data[features]
-y = data[target]
+# Split features and target
+X = df_cleaned.drop(columns=["Attack Type"])
+y = df_cleaned["Attack Type"]
 
-# Scale the features
+# Standardize numerical features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.20, random_state=42)
+# Apply SMOTE to balance the dataset
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
 
+# Split the resampled data
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
 
-# Train a Random Forest model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+# Train Random Forest model
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
 
-# Make predictions
-y_pred = model.predict(X_test)
+# Predictions
+y_pred = rf_model.predict(X_test)
 
-# Evaluate the model
+# Evaluate performance
 accuracy = accuracy_score(y_test, y_pred)
-report = classification_report(y_test, y_pred)
+report = classification_report(y_test, y_pred, target_names=label_encoders["Attack Type"].classes_)
 
-print("Model Accuracy:", accuracy)
+# Print results
+print("Accuracy:", accuracy)
 print("\nClassification Report:\n", report)
+
+import joblib
+
+# Save the trained Random Forest model
+joblib.dump(rf_model, "random_forest_model.pkl")
+joblib.dump(scaler, "scaler.pkl")  # Save the scaler for preprocessing
+joblib.dump(label_encoders["Protocol"], "protocol_encoder.pkl")
+joblib.dump(label_encoders["Request Type"], "request_encoder.pkl")
