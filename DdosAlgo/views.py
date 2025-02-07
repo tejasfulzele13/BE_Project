@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.http import JsonResponse
 
-# Create your views here.
+
 def home(requests):
     return render(requests , 'home.html')
 
@@ -23,7 +23,7 @@ def authenticate_user(request):
     return JsonResponse({"status": "error", "message": "Invalid request"})
 
 def dashboard(request):
-    return render(request, 'dashboard.html')  # Create this file for the next page after login
+    return render(request, 'dashboard.html')  
 
 
 import pandas as pd
@@ -34,16 +34,16 @@ from django.http import JsonResponse
 from sklearn.preprocessing import LabelEncoder
 from django.views.decorators.csrf import csrf_exempt
 
-# Set up logging
+
 logger = logging.getLogger(__name__)
 
-# Load the trained model and preprocessing objects
+
 rf_model = joblib.load("random_forest_model.pkl")
 scaler = joblib.load("scaler.pkl")
 protocol_encoder = joblib.load("protocol_encoder.pkl")
 request_encoder = joblib.load("request_encoder.pkl")
 
-# Columns used during training for feature scaling
+
 feature_columns = [
     "Source Port",
     "Destination Port",
@@ -55,23 +55,24 @@ feature_columns = [
     "Anomaly Score"
 ]
 
-@csrf_exempt  # Allow POST requests without CSRF token (for testing purposes)
+
+@csrf_exempt  
 def classify_attack(request):
     if request.method == 'POST':
         try:
-            # Log the incoming request for debugging
+           
             logger.debug(f"Received request data: {request.body}")
 
-            # Load the input data
+            
             data = json.loads(request.body)
             
-            # Check if all required fields are present in the request
+            
             missing_fields = [field for field in feature_columns if field not in data]
             if missing_fields:
                 logger.error(f"Missing fields: {missing_fields}")
                 return JsonResponse({"error": f"Missing fields: {', '.join(missing_fields)}"}, status=400)
             
-            # Prepare the incoming data as a pandas DataFrame
+            
             features = {
                 "Source Port": [data["Source Port"]],
                 "Destination Port": [data["Destination Port"]],
@@ -84,7 +85,7 @@ def classify_attack(request):
             }
             df = pd.DataFrame(features)
 
-            # Encode categorical variables
+           
             try:
                 df["Protocol"] = protocol_encoder.transform(df["Protocol"])
                 df["Request Type"] = request_encoder.transform(df["Request Type"])
@@ -92,20 +93,29 @@ def classify_attack(request):
                 logger.error(f"Encoding error: {e}")
                 return JsonResponse({"error": f"Encoding error: {e}"}, status=400)
 
-            # Standardize the features (using the same scaler used during training)
+            
             try:
                 df_scaled = scaler.transform(df)
             except ValueError as e:
                 logger.error(f"Standardization error: {e}")
                 return JsonResponse({"error": f"Standardization error: {e}"}, status=400)
 
-            # Predict using the trained model
+            
             prediction = rf_model.predict(df_scaled)
 
-            # Convert the prediction from int64 to a regular int
+           
             prediction = int(prediction[0])
+            if prediction == 2:
+                prediction = "Normal Traffic"
+            elif prediction ==1 :
+                prediction = "DDOS Attack"
+            else:
+                prediction = "Botnet Attack"
+            
+            
+            
 
-            # Return the predicted attack type
+           
             return JsonResponse({"Prediction": prediction})
 
         except json.JSONDecodeError as e:
@@ -117,3 +127,5 @@ def classify_attack(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+
+ 
