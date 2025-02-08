@@ -3,7 +3,13 @@ import requests
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.http import JsonResponse
-
+import pandas as pd
+import json
+import joblib
+import logging
+from django.http import JsonResponse
+from sklearn.preprocessing import LabelEncoder
+from django.views.decorators.csrf import csrf_exempt
 
 def home(requests):
     return render(requests , 'home.html')
@@ -22,17 +28,10 @@ def authenticate_user(request):
 
     return JsonResponse({"status": "error", "message": "Invalid request"})
 
-def dashboard(request):
-    return render(request, 'dashboard.html')  
+  
 
 
-import pandas as pd
-import json
-import joblib
-import logging
-from django.http import JsonResponse
-from sklearn.preprocessing import LabelEncoder
-from django.views.decorators.csrf import csrf_exempt
+
 
 
 logger = logging.getLogger(__name__)
@@ -56,23 +55,21 @@ feature_columns = [
 ]
 
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+import pandas as pd
+import logging
+from .models import AttackLog  # Import the model
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt  
 def classify_attack(request):
     if request.method == 'POST':
         try:
-           
-            logger.debug(f"Received request data: {request.body}")
-
-            
             data = json.loads(request.body)
-            
-            
-            missing_fields = [field for field in feature_columns if field not in data]
-            if missing_fields:
-                logger.error(f"Missing fields: {missing_fields}")
-                return JsonResponse({"error": f"Missing fields: {', '.join(missing_fields)}"}, status=400)
-            
-            
+
             features = {
                 "Source Port": [data["Source Port"]],
                 "Destination Port": [data["Destination Port"]],
@@ -85,47 +82,78 @@ def classify_attack(request):
             }
             df = pd.DataFrame(features)
 
-           
-            try:
-                df["Protocol"] = protocol_encoder.transform(df["Protocol"])
-                df["Request Type"] = request_encoder.transform(df["Request Type"])
-            except KeyError as e:
-                logger.error(f"Encoding error: {e}")
-                return JsonResponse({"error": f"Encoding error: {e}"}, status=400)
+            df["Protocol"] = protocol_encoder.transform(df["Protocol"])
+            df["Request Type"] = request_encoder.transform(df["Request Type"])
+            df_scaled = scaler.transform(df)
 
-            
-            try:
-                df_scaled = scaler.transform(df)
-            except ValueError as e:
-                logger.error(f"Standardization error: {e}")
-                return JsonResponse({"error": f"Standardization error: {e}"}, status=400)
-
-            
             prediction = rf_model.predict(df_scaled)
-
-           
             prediction = int(prediction[0])
-            if prediction == 2:
-                prediction = "Normal Traffic"
-            elif prediction ==1 :
-                prediction = "DDOS Attack"
-            else:
-                prediction = "Botnet Attack"
-            
-            
-            
 
-           
-            return JsonResponse({"Prediction": prediction})
+            if prediction == 2:
+                prediction_label = "Normal Traffic"
+            elif prediction == 1:
+                prediction_label = "DDOS Attack"
+            else:
+                prediction_label = "Botnet Attack"
+
+            # Save to database
+            AttackLog.objects.create(
+                source_port=data["Source Port"],
+                destination_port=data["Destination Port"],
+                packet_size=data["Packet Size (bytes)"],
+                packet_rate=data["Packet Rate (pps)"],
+                connection_duration=data["Connection Duration (seconds)"],
+                protocol=data["Protocol"],
+                request_type=data["Request Type"],
+                anomaly_score=data["Anomaly Score"],
+                prediction=prediction_label
+            )
+
+            return JsonResponse({"Prediction": prediction_label})
 
         except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
             return JsonResponse({"error": "Invalid JSON format"}, status=400)
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
             return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=400)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
- 
+
+from django.http import JsonResponse
+from .models import AttackLog
+
+def get_traffic_logs(request):
+    logs = AttackLog.objects.order_by('-timestamp')[:50]  # Get last 50 logs
+    log_list = [
+        {
+            "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "source_port": log.source_port,
+            "destination_port": log.destination_port,
+            "packet_size": log.packet_size,
+            "packet_rate": log.packet_rate,
+            "connection_duration": log.connection_duration,
+            "protocol": log.protocol,
+            "request_type": log.request_type,
+            "anomaly_score": log.anomaly_score,
+            "prediction": log.prediction,
+        }
+        for log in logs
+    ]
+    return JsonResponse({"logs": log_list})
+
+
+
+from django.shortcuts import render
+
+def traffic_dashboard(requests):
+    return render(requests, "dashboard.html")
+
+from django.http import JsonResponse
+from .models import AttackLog
+
+def clear_logs(request):
+    if request.method == "POST":
+        AttackLog.objects.all().delete()  # Delete all logs
+        return JsonResponse({"message": "Logs cleared successfully"})
+    return JsonResponse({"error": "Invalid request method"}, status=405)

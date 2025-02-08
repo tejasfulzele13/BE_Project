@@ -3,78 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attack Classification</title>
-    <script>
-        async function classifyAttack() {
-            const formData = {
-                "Source Port": document.getElementById("source_port").value,
-                "Destination Port": document.getElementById("destination_port").value,
-                "Packet Size (bytes)": document.getElementById("packet_size").value,
-                "Packet Rate (pps)": document.getElementById("packet_rate").value,
-                "Connection Duration (seconds)": document.getElementById("connection_duration").value,
-                "Protocol": document.getElementById("protocol").value,
-                "Request Type": document.getElementById("request_type").value,
-                "Anomaly Score": document.getElementById("anomaly_score").value
-            };
-
-            const response = await fetch('/classify_attack/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const data = await response.json();
-            document.getElementById("result").innerText = "Prediction: " + data.Prediction;
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.startsWith(name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    </script>
+    <title>Attack Traffic Monitor</title>
 </head>
-<body>
-    <h2>Network Traffic Classification</h2>
-    
-    <label>Source Port:</label>
-    <input type="number" id="source_port"><br>
+<body style="font-family: 'Arial', sans-serif; background-color: #347b8d; margin: 0; padding: 20px; text-align: center;">
 
-    <label>Destination Port:</label>
-    <input type="number" id="destination_port"><br>
+    <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); max-width: 1200px; margin: auto;">
+        <h2 style="color: #13bd98; margin-bottom: 20px;">Live Attack Traffic Monitor</h2>
+        
+        <button onclick="clearLogs()" style="background-color: #04724d; color: white; border: none; padding: 10px 15px; font-size: 16px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; margin-bottom: 15px;">
+            Clear Logs
+        </button>
 
-    <label>Packet Size (bytes):</label>
-    <input type="number" id="packet_size"><br>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">#</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Timestamp</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Source Port</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Destination Port</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Packet Size</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Packet Rate</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Connection Duration</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Protocol</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Request Type</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Anomaly Score</th>
+                    <th style="background-color: #13bd98; color: white; padding: 10px; border: 1px solid #ccc;">Prediction</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+                <!-- Logs will be inserted here -->
+            </tbody>
+        </table>
+    </div>
 
-    <label>Packet Rate (pps):</label>
-    <input type="number" id="packet_rate"><br>
+    <script>
+        async function fetchTrafficLogs() {
+            try {
+                let response = await fetch("/get_traffic_logs/");
+                let data = await response.json();
+                let logs = data.logs;
 
-    <label>Connection Duration (seconds):</label>
-    <input type="number" id="connection_duration"><br>
+                let tableBody = document.getElementById("logTableBody");
+                tableBody.innerHTML = "";
 
-    <label>Protocol:</label>
-    <input type="text" id="protocol"><br>
+                logs.forEach((log, index) => {
+                    let row = `<tr style="background-color: ${index % 2 === 0 ? '#f2f2f2' : '#d1f0e0'};">
+                        <td style="padding: 10px; border: 1px solid #ccc;">${index + 1}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.timestamp}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.source_port}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.destination_port}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.packet_size}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.packet_rate}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.connection_duration}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.protocol}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.request_type}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;">${log.anomaly_score}</td>
+                        <td style="padding: 10px; border: 1px solid #ccc;"><strong>${log.prediction}</strong></td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error("Error fetching logs:", error);
+            }
+        }
 
-    <label>Request Type:</label>
-    <input type="text" id="request_type"><br>
+        async function clearLogs() {
+            try {
+                let response = await fetch("/clear_logs/", { method: "POST" });
+                let data = await response.json();
+                
+                if (response.status === 200) {
+                    alert("Logs cleared successfully!");
+                    document.getElementById("logTableBody").innerHTML = "";
+                } else {
+                    alert("Error clearing logs: " + data.error);
+                }
+            } catch (error) {
+                console.error("Error clearing logs:", error);
+            }
+        }
 
-    <label>Anomaly Score:</label>
-    <input type="number" id="anomaly_score"><br>
+        setInterval(fetchTrafficLogs, 5000);
+    </script>
 
-    <button onclick="classifyAttack()">Classify Attack</button>
-
-    <h3 id="result"></h3>
 </body>
 </html>
