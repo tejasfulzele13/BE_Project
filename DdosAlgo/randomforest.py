@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from imblearn.over_sampling import SMOTE
 
 # Load the dataset
-file_path = "Dataset.csv"  # Update with your actual path
+file_path = "Dataset01.csv"  # Update with your actual path
 df = pd.read_csv(file_path)
 
 # Drop non-relevant columns
