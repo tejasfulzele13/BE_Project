@@ -5,7 +5,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score
 
 # Load the dataset
-file_path = 'Datasets.csv'  # Replace with your file's path
+file_path = 'Dataset.csv'  # Replace with your file's path
 data = pd.read_csv(file_path, low_memory=False)
 
 # Encode categorical columns

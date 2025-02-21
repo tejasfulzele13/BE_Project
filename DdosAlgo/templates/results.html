@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Models</title>
+    
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* General Page Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2C3E50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 150vh;
+            margin: 0;
+        }
+
+        /* Main Container */
+        .container {
+            background-color: white;
+            padding: 80px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 600px;
+            text-align: center;
+        }
+
+        /* Heading */
+        h2 {
+            color: #27AE60;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-bottom: 10px;
+        }
+
+        .train-btn {
+            background-color: #16A085;
+        }
+
+        .train-btn:hover {
+            background-color: #1ABC9C;
+            transform: scale(1.05);
+        }
+
+        .dashboard-btn {
+            background-color: #2980B9;
+        }
+
+        .dashboard-btn:hover {
+            background-color: #3498DB;
+            transform: scale(1.05);
+        }
+
+        /* Loading Animation */
+        #loading {
+            display: none;
+            font-size: 18px;
+            color: #3498DB;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            width: 100%;
+            margin-top: 30px;
+            background: #ECF0F1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Adjust Chart Size */
+        canvas {
+            max-width: 100%;
+            height: 220px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Train and Evaluate Models</h2>
+
+        <button id="trainButton" class="btn train-btn">Train Models</button>
+        <button id="dashboardButton" class="btn dashboard-btn">Go to Monitoring Dashboard</button>
+
+        <div id="loading">Training in progress...</div>
+
+        <div class="chart-container">
+            <h3>Model Accuracy</h3>
+            <canvas id="accuracyChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3>Accuracy Distribution</h3>
+            <canvas id="accuracyPieChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Train Models Button Click
+        document.getElementById("trainButton").addEventListener("click", function() {
+            document.getElementById("loading").style.display = "block"; // Show loading text
+
+            fetch('/train-models/')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("loading").style.display = "none"; // Hide loading
+
+                    if (data.status === "success") {
+                        const results = data.results;
+                        const labels = Object.keys(results);
+                        const accuracies = Object.values(results);
+
+                        // Clear previous charts before drawing new ones
+                        document.getElementById('accuracyChart').remove();
+                        document.getElementById('accuracyPieChart').remove();
+
+                        // Recreate canvas elements for new charts
+                        const barCanvas = document.createElement("canvas");
+                        barCanvas.id = "accuracyChart";
+                        document.querySelector(".chart-container").appendChild(barCanvas);
+
+                        const pieCanvas = document.createElement("canvas");
+                        pieCanvas.id = "accuracyPieChart";
+                        document.querySelectorAll(".chart-container")[1].appendChild(pieCanvas);
+
+                        const barCtx = document.getElementById('accuracyChart').getContext('2d');
+                        new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Accuracy (%)',
+                                    data: accuracies,
+                                    backgroundColor: ['rgba(52, 152, 219, 0.8)', 'rgba(231, 76, 60, 0.8)', 'rgba(241, 196, 15, 0.8)', 'rgba(46, 204, 113, 0.8)'],
+                                    borderColor: 'rgba(0, 0, 0, 0.3)',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    barPercentage: 0.7,
+                                    hoverBackgroundColor: ['#2980B9', '#C0392B', '#F1C40F', '#27AE60']
+                                }]
+                            },
+                            options: {
+                                plugins: {
+                                    legend: { display: true },
+                                    tooltip: { enabled: true, backgroundColor: '#2C3E50', titleColor: '#ECF0F1', bodyColor: '#ECF0F1' }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100,
+                                        ticks: { color: '#2C3E50', font: { weight: 'bold' } },
+                                        grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                                    },
+                                    x: {
+                                        ticks: { color: '#2C3E50', font: { weight: 'bold' } }
+                                    }
+                                }
+                            }
+                        });
+
+                        const pieCtx = document.getElementById('accuracyPieChart').getContext('2d');
+                        new Chart(pieCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Accuracy Distribution',
+                                    data: accuracies,
+                                    backgroundColor: ['#FF5733', '#36A2EB', '#FFD700', '#2ECC71'],
+                                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    hoverOffset: 8
+                                }]
+                            },
+                            options: {
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { font: { weight: 'bold' }, color: '#2C3E50' } }
+                                }
+                            }
+                        });
+
+                    } else {
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("loading").style.display = "none"; // Hide loading
+                    console.error('Error:', error);
+                    alert("An error occurred while training the models.");
+                });
+        });
+
+        // Redirect to Monitoring Dashboard
+        document.getElementById("dashboardButton").addEventListener("click", function() {
+            window.location.href = "/dashboard/"; // Redirect to the Monitoring Dashboard
+        });
+    </script>
+
+</body>
+</html>

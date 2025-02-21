@@ -80,7 +80,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === "success") {
-                    window.location.href = "/dashboard/"; // Redirect to dashboard after login
+                    window.location.href = "/results/"; // Redirect to dashboard after login
                 } else {
                     document.getElementById("error-message").innerText = data.message;
                 }

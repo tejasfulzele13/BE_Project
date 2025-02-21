@@ -47,6 +47,9 @@
                 tableBody.innerHTML = "";
 
                 logs.forEach((log, index) => {
+                    // Highlight predictions other than "Normal" in red
+                    let predictionColor = log.prediction.toLowerCase() === "Normal Traffic" ? "black" : "red";
+
                     let row = `<tr style="background-color: ${index % 2 === 0 ? '#f2f2f2' : '#d1f0e0'};">
                         <td style="padding: 10px; border: 1px solid #ccc;">${index + 1}</td>
                         <td style="padding: 10px; border: 1px solid #ccc;">${log.timestamp}</td>
@@ -58,7 +61,7 @@
                         <td style="padding: 10px; border: 1px solid #ccc;">${log.protocol}</td>
                         <td style="padding: 10px; border: 1px solid #ccc;">${log.request_type}</td>
                         <td style="padding: 10px; border: 1px solid #ccc;">${log.anomaly_score}</td>
-                        <td style="padding: 10px; border: 1px solid #ccc;"><strong>${log.prediction}</strong></td>
+                        <td style="padding: 10px; border: 1px solid #ccc; font-weight: bold; color: ${predictionColor};">${log.prediction}</td>
                     </tr>`;
                     tableBody.innerHTML += row;
                 });
@@ -83,6 +86,7 @@
             }
         }
 
+        // Fetch logs every 5 seconds
         setInterval(fetchTrafficLogs, 5000);
     </script>
 
