@@ -176,7 +176,7 @@ from imblearn.over_sampling import SMOTE
 def train_models(request):
     try:
         # Load dataset
-        file_path = "Dataset01.csv"  # Adjust path as needed
+        file_path = "Dataset.csv"  # Adjust path as needed
         df = pd.read_csv(file_path)
 
         # Drop non-relevant columns
