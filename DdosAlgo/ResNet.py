@@ -9,7 +9,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 
 # Load the dataset
-file_path = "Dataset01.csv"
+file_path = "Dataset.csv"
 df = pd.read_csv(file_path)
 
 # Drop non-relevant columns

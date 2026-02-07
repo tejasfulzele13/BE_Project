@@ -1,5 +1,55 @@
-*.pkl
-*.csv
-/__pycache__/
+# =========================
+# Python cache & temp files
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
 
-/migrations
+# =========================
+# Virtual environments
+# =========================
+env/
+venv/
+.venv/
+
+# =========================
+# OS / Editor files
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Django specific
+# =========================
+db.sqlite3
+*.sqlite3
+
+# =========================
+# ML / Model files (DO NOT push trained models)
+# =========================
+*.pkl
+*.pth
+*.h5
+*.joblib
+
+# =========================
+# Datasets (large / sensitive)
+# =========================
+*.csv
+*.zip
+
+# =========================
+# Secrets / configs
+# =========================
+secrets.txt
+*.env
+
+# =========================
+# Misc generated folders
+# =========================
+__pycache__/
+
